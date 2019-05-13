@@ -25,6 +25,7 @@ enum ImGuiFileBrowserFlags_
     ImGuiFileBrowserFlags_NoStatusBar        = 1 << 4, // hide status bar at the bottom of browsing window
     ImGuiFileBrowserFlags_CloseOnEsc         = 1 << 5, // close file browser when pressing 'ESC'
     ImGuiFileBrowserFlags_CreateNewDir       = 1 << 6, // allow user to create new directory
+	ImGuiFileBrowserFlags_SingleClickDir	 = 1 << 7, // open directory when single click (useful if user is only allowed to select files)
 	ImGuiFileBrowserFlags_SortIgnoreCase	 = 1 << 8, // ignore case when sorting files
 };
 
@@ -319,6 +320,7 @@ inline void ImGui::FileBrowser::Display()
             }
 
             if(IsItemClicked(0) && IsMouseDoubleClicked(0) && rsc.isDir)
+            if(IsItemClicked(0) && ((flags_ & ImGuiFileBrowserFlags_SingleClickDir) || IsMouseDoubleClicked(0)) && rsc.isDir)
             {
                 setNewPwd = true;
                 newPwd = (rsc.name != "..") ? (pwd_ / rsc.name) : pwd_.parent_path();
