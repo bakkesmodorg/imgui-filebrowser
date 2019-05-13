@@ -69,6 +69,10 @@ namespace ImGui
         // set selected filename to empty
         void ClearSelected();
 
+#ifdef _WIN32
+		// get all available Windows drives. Maybe add flags here (network, removable etc..)
+		std::vector<std::string>* GetDrives();
+#endif
     private:
 
         class ScopeGuard
