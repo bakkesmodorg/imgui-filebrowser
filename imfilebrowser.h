@@ -14,6 +14,7 @@
 #define MAX_DRIVES_LENGTH 256
 #include <Windows.h>
 #endif
+
 using ImGuiFileBrowserFlags = int;
 
 enum ImGuiFileBrowserFlags_
@@ -44,6 +45,12 @@ namespace ImGui
 
         // set the window title text
         void SetTitle(std::string title);
+
+		// sets accepted file type
+		void SetAcceptableFileTypes(std::string extension);
+
+
+		bool IsAcceptableFileType(std::string filename);
 
         // open the browsing window
         void Open();
@@ -92,6 +99,8 @@ namespace ImGui
 
         std::string title_;
         std::string openLabel_;
+
+		std::vector<std::string> acceptedFileTypes_;
 
         bool openFlag_;
         bool closeFlag_;
@@ -187,6 +196,34 @@ inline void ImGui::FileBrowser::Close()
     statusStr_ = std::string();
     closeFlag_ = true;
     openFlag_ = false;
+}
+
+
+
+
+inline void ImGui::FileBrowser::SetAcceptableFileTypes(std::string extension)
+{
+	acceptedFileTypes_.clear();
+
+	size_t pos = 0;
+	std::string acceptedExtension;
+	while ((pos = extension.find('|')) != std::string::npos) {
+		acceptedExtension = extension.substr(0, pos);
+		acceptedFileTypes_.push_back(acceptedExtension);
+		extension.erase(0, 1);
+	}
+	if (!extension.empty())
+	{
+		acceptedFileTypes_.push_back(extension);
+	}
+}
+
+inline bool ImGui::FileBrowser::IsAcceptableFileType(std::string filename)
+{
+	if(filename.find('.') != std::string::npos) //argument is full file name/path name, take extension
+		filename = filename.substr(filename.rfind(".") + 1);
+
+	return acceptedFileTypes_.empty() || std::find(acceptedFileTypes_.begin(), acceptedFileTypes_.end(), filename) != acceptedFileTypes_.end();
 }
 
 inline bool ImGui::FileBrowser::IsOpened() const noexcept
@@ -324,7 +361,7 @@ inline void ImGui::FileBrowser::Display()
     // browse files in a child window
 
     float reserveHeight = GetItemsLineHeightWithSpacing();
-    std::filesystem::path newPwd; bool setNewPwd = false;
+    
     if(!(flags_ & ImGuiFileBrowserFlags_SelectDirectory) && (flags_ & ImGuiFileBrowserFlags_EnterNewFilename))
         reserveHeight += GetItemsLineHeightWithSpacing();
     {
@@ -354,7 +391,6 @@ inline void ImGui::FileBrowser::Display()
                 }
             }
 
-            if(IsItemClicked(0) && IsMouseDoubleClicked(0) && rsc.isDir)
             if(IsItemClicked(0) && ((flags_ & ImGuiFileBrowserFlags_SingleClickDir) || IsMouseDoubleClicked(0)) && rsc.isDir)
             {
                 setNewPwd = true;
