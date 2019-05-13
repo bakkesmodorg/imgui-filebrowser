@@ -219,7 +219,7 @@ inline void ImGui::FileBrowser::Display()
     ScopeGuard endPopup([] { EndPopup(); });
 
     // display elements in pwd
-
+	std::filesystem::path newPwd; bool setNewPwd = false;
     int secIdx = 0, newPwdLastSecIdx = -1;
     for(auto &sec : pwd_)
     {
@@ -233,8 +233,39 @@ inline void ImGui::FileBrowser::Display()
         PushID(secIdx);
         if(secIdx > 0)
             SameLine();
+#ifdef _WIN32
+		if (secIdx == 0)
+		{
+			ImGui::PushItemWidth(35);
+			if (ImGui::BeginCombo("##drivecombo", sec.u8string().c_str())) 
+			{
+				const std::vector<std::string>* drives = GetDrives();
+				for (int i = 0; i < drives->size(); i++)
+				{
+					bool is_selected = sec.compare(drives->at(i)) == 0; 
+					if (ImGui::Selectable(drives->at(i).c_str(), is_selected))
+					{
+						setNewPwd = true;
+						newPwd = drives->at(i);
+					}
+						
+					if (is_selected) 
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::PopItemWidth();
+		}
+		else
+		{
+#endif
         if(SmallButton(sec.u8string().c_str()))
             newPwdLastSecIdx = secIdx;
+#ifdef _WIN32
+		}
+#endif
         PopID();
         ++secIdx;
     }
@@ -414,6 +445,25 @@ inline void ImGui::FileBrowser::ClearSelected()
     (*inputNameBuf_)[0] = '\0';
     ok_ = false;
 }
+
+#ifdef _WIN32
+inline std::vector<std::string>* ImGui::FileBrowser::GetDrives()
+{
+	static std::vector<std::string> drives; 
+	if (drives.size() == 0)
+	{
+		char drivesBuffer[MAX_DRIVES_LENGTH];
+		GetLogicalDriveStrings(MAX_DRIVES_LENGTH, drivesBuffer);
+		char *currentDrive = drivesBuffer;
+		while (currentDrive != NULL && lstrlen(currentDrive) > 0)
+		{
+			drives.push_back(std::string(currentDrive));
+			currentDrive += lstrlen(currentDrive) + 1;
+		}
+	}
+	return &drives;
+}
+#endif
 
 inline void ImGui::FileBrowser::SetPwdUncatched(const std::filesystem::path &pwd)
 {
