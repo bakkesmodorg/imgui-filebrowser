@@ -10,6 +10,10 @@
 #   error "include imgui.h before this header"
 #endif
 
+#ifdef _WIN32
+#define MAX_DRIVES_LENGTH 256
+#include <Windows.h>
+#endif
 using ImGuiFileBrowserFlags = int;
 
 enum ImGuiFileBrowserFlags_
@@ -21,6 +25,7 @@ enum ImGuiFileBrowserFlags_
     ImGuiFileBrowserFlags_NoStatusBar        = 1 << 4, // hide status bar at the bottom of browsing window
     ImGuiFileBrowserFlags_CloseOnEsc         = 1 << 5, // close file browser when pressing 'ESC'
     ImGuiFileBrowserFlags_CreateNewDir       = 1 << 6, // allow user to create new directory
+	ImGuiFileBrowserFlags_SortIgnoreCase	 = 1 << 8, // ignore case when sorting files
 };
 
 namespace ImGui
@@ -426,15 +431,21 @@ inline void ImGui::FileBrowser::SetPwdUncatched(const std::filesystem::path &pwd
         rcd.name = p.path().filename().string();
         if(rcd.name.empty())
             continue;
-
+		if (!rcd.isDir && !IsAcceptableFileType(rcd.name))
+			continue;
         rcd.showName = (rcd.isDir ? "[D] " : "[F] ") + p.path().filename().u8string();
+		
         fileRecords_.push_back(rcd);
     }
 
     std::sort(fileRecords_.begin(), fileRecords_.end(),
-        [](const FileRecord &L, const FileRecord &R)
+        [flags = flags_](const FileRecord &L, const FileRecord &R)
     {
-        return (L.isDir ^ R.isDir) ? L.isDir : (L.name < R.name);
+        return (L.isDir ^ R.isDir) ? L.isDir : ((flags & ImGuiFileBrowserFlags_SortIgnoreCase) ? (
+			lexicographical_compare(L.name.begin(), L.name.end(), R.name.begin(), R.name.end(), [](char ai, char bi) {
+				return tolower(ai) < tolower(bi);
+			}
+			)) : (L.name < R.name));
     });
 
     pwd_ = absolute(pwd);
